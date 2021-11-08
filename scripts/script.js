@@ -1,3 +1,33 @@
+// training constants
+const TRAIN_EPOCHS = 100;
+const TRAIN_BATCH_SIZE = 32;
+
+/**
+ * Trains the model
+ */
+ async function start() {
+    // get data
+    const [trainXs, trainYs, testXs, testYs, classKeys] = await getData();
+    renderData(trainXs, trainYs, classKeys);
+
+    // get the model and render it
+    const model = createModel(trainXs.shape[1]);
+    tfvis.show.modelSummary({ name: 'Model Summary' }, model);
+
+    // compile model
+    model.compile({
+        optimizer: tf.train.adam(),
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy'],
+    });
+
+    // train model
+    await trainModel(model, trainXs, trainYs);
+
+    // test model
+    await testModel(model, trainXs, trainYs, classKeys);
+}
+
 /**
  * Retrives data from database to train model on
  * @return {[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]} [trainXs, trainYs, testXs, testYs]
@@ -13,11 +43,11 @@ async function getData() {
  */
 async function getFakeData() {
     // parameters to generate fake data 
-    const numExamplesPerClass = 100;
-    const [walkMin, walkMax] = [0, 10];
+    const numExamplesPerClass = 1000;
+    const [walkMin, walkMax] = [0, 15];
     const [bikeMin, bikeMax] = [10, 30];
-    const [busMin, busMax] = [10, 30];
-    const [carMin, carMax] = [30, 60];
+    const [busMin, busMax] = [20, 60];
+    const [carMin, carMax] = [40, 90];
 
     // create a key table for classes
     const classKeys = {
@@ -26,6 +56,12 @@ async function getFakeData() {
         bus: 2,
         car: 3
     };
+    const classIdToClass = {
+        0: 'walk',
+        1: 'bike',
+        2: 'bus',
+        3: 'car'
+    }
 
     // generate arrays of random commute times between min and max for each class
     const fakeData = [];
@@ -55,14 +91,28 @@ async function getFakeData() {
     const trainData = fakeData.slice(0, fakeData.length * 0.8);
     const testData = fakeData.slice(fakeData.length * 0.8);
 
-    // create tensors for train and test data
+    // create tensors for train data
     const trainXs = tf.tensor2d(trainData.map(d => [d.time]));
-    const trainYs = tf.tensor2d(trainData.map(d => [classKeys[d.class]]));
+
+    // create one-hot tensor depending on class
+    const trainYs = tf.stack(trainData.map(d => {
+        const classIndex = classKeys[d.class];
+        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
+        return oneHot;
+    }));
+
+    // create tensors for test data
     const testXs = tf.tensor2d(testData.map(d => [d.time]));
-    const testYs = tf.tensor2d(testData.map(d => [classKeys[d.class]]));
+
+    // create one-hot tensor depending on class
+    const testYs = tf.stack(testData.map(d => {
+        const classIndex = classKeys[d.class];
+        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
+        return oneHot;
+    }));
 
     // return tensors and class key array
-    return [trainXs, trainYs, testXs, testYs, classKeys];
+    return [trainXs, trainYs, testXs, testYs, classIdToClass];
 }
 
 /**
@@ -81,21 +131,31 @@ function shuffle(a) {
 }
 
 /**
- * Trains the model
+ * Returns a sequential model
+ * @param {number} inputShape
  */
-async function start() {
-    // get data
-    const [trainXs, trainYs, testXs, testYs, classKeys] = await getData();
+function createModel(inputShape) {
+    // define new sequential model
+    const model = tf.sequential();
 
-    // print out the data
-    console.log('trainXs:', trainXs.shape);
-    console.log('trainYs:', trainYs.shape);
-    console.log('testXs:', testXs.shape);
-    console.log('testYs:', testYs.shape);
-    console.log('classKeys:', classKeys);
+    // add dense input
+    model.add(tf.layers.dense({
+        inputShape: inputShape,
+        kernalInitializer: 'varianceScaling',
+        units: 1,
+        useBias: true,
+    }));
 
-    // render data
-    renderData(trainXs, trainYs, testXs, testYs, classKeys);
+    // add dense output
+    model.add(tf.layers.dense({
+        units: 4,
+        kernalInitializer: 'VarianceScaling',
+        activation: 'softmax',
+        useBias: true,
+    }));
+
+    // return the model
+    return model;
 }
 
 /**
@@ -107,9 +167,12 @@ async function start() {
  * @param {Object} classKeys
  */
 function renderData(trainXs, trainYs, classKeys) {
+    console.log(classKeys)
     // convert tensors to plottable points
     const trainXsData = trainXs.dataSync();
-    const trainYsData = trainYs.dataSync();
+    const trainYsData = trainYs.arraySync().map(d => d.indexOf(1));
+    // console.log(trainYsData);
+    
     const points = [];
     for (let i = 0; i < trainXsData.length; i++) {
         points.push({
@@ -123,6 +186,68 @@ function renderData(trainXs, trainYs, classKeys) {
     tfvis.render.scatterplot(
         { name: 'Train Data' },
         { values: points },
+        {
+            xLabel: 'Time (minutes)',
+            yLabel: 'Class',
+            height: 300
+        }
+    );
+}
+
+/**
+ * Trains model and renders progress to page
+ * @param {tf.Model} model
+ * @param {tf.Tensor} trainXs
+ * @param {tf.Tensor} trainYs
+ */
+async function trainModel(model, trainXs, trainYs) {
+    return await model.fit(trainXs, trainYs, {
+        batchSize: TRAIN_BATCH_SIZE,
+        epochs: TRAIN_EPOCHS,
+        shuffle: true,
+        callbacks: tfvis.show.fitCallbacks(
+            { name: 'Training Performance' },
+            ['loss', 'accuracy'],
+            { height: 200, callbacks: ['onEpochEnd'] }
+        )
+    });
+}
+ 
+/**
+ * Uses the model to predict the mode of transport of a uniform range of times
+ * @param {tf.Model} model
+ * @param {tf.Tensor} inputData
+ */
+async function testModel(model, trainXs, trainYs, classKeys) {
+    // generate predictions for a uniform range of times from 0 to 60
+    const [xs, preds] = tf.tidy(() => {
+        const xs = tf.linspace(0, 60, 100);
+        const preds = model.predict(xs.reshape([100, 1])).argMax(-1);
+        return [xs.dataSync(), preds.dataSync()];
+    });
+
+    // convert predictions to points
+    const predictedPoints = Array.from(xs).map((x, i) => ({
+        x, 
+        y: preds[i],
+        class: classKeys[preds[i]]
+    }));
+
+    // convert original data to points
+    const trainXsData = trainXs.dataSync();
+    const trainYsData = trainYs.dataSync();
+    const originalPoints = [];
+    for (let i = 0; i < trainXsData.length; i++) {
+        originalPoints.push({
+            x: trainXsData[i],
+            y: trainYsData[i],
+        });
+    }
+
+    // render predictions
+    tfvis.render.scatterplot(
+        { name: 'Predicted Data' },
+        { values: predictedPoints, originalPoints, series: ['predicted', 'original'] },
         {
             xLabel: 'Time (minutes)',
             yLabel: 'Class',
