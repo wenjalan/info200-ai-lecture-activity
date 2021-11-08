@@ -1,6 +1,6 @@
 // training constants
-const TRAIN_EPOCHS = 100;
-const TRAIN_BATCH_SIZE = 32;
+const TRAIN_EPOCHS = 50;
+const TRAIN_BATCH_SIZE = 10;
 
 /**
  * Trains the model
@@ -25,7 +25,7 @@ const TRAIN_BATCH_SIZE = 32;
     await trainModel(model, trainXs, trainYs);
 
     // test model
-    await testModel(model, trainXs, trainYs, classKeys);
+    await testModel(model, testXs, testYs, classKeys);
 }
 
 /**
@@ -43,7 +43,7 @@ async function getData() {
  */
 async function getFakeData() {
     // parameters to generate fake data 
-    const numExamplesPerClass = 1000;
+    const numExamplesPerClass = 800;
     const [walkMin, walkMax] = [0, 15];
     const [bikeMin, bikeMax] = [10, 30];
     const [busMin, busMax] = [20, 60];
@@ -146,6 +146,13 @@ function createModel(inputShape) {
         useBias: true,
     }));
 
+    // add a dense hidden
+    model.add(tf.layers.dense({
+        kernalInitializer: 'varianceScaling',
+        units: 2,
+        useBias: true
+    }));
+
     // add dense output
     model.add(tf.layers.dense({
         units: 4,
@@ -167,7 +174,6 @@ function createModel(inputShape) {
  * @param {Object} classKeys
  */
 function renderData(trainXs, trainYs, classKeys) {
-    console.log(classKeys)
     // convert tensors to plottable points
     const trainXsData = trainXs.dataSync();
     const trainYsData = trainYs.arraySync().map(d => d.indexOf(1));
@@ -189,6 +195,7 @@ function renderData(trainXs, trainYs, classKeys) {
         {
             xLabel: 'Time (minutes)',
             yLabel: 'Class',
+            yAxisDomain: [-0.5, 3.5],
             height: 300
         }
     );
@@ -207,7 +214,7 @@ async function trainModel(model, trainXs, trainYs) {
         shuffle: true,
         callbacks: tfvis.show.fitCallbacks(
             { name: 'Training Performance' },
-            ['loss', 'accuracy'],
+            ['loss', 'acc'],
             { height: 200, callbacks: ['onEpochEnd'] }
         )
     });
@@ -221,7 +228,7 @@ async function trainModel(model, trainXs, trainYs) {
 async function testModel(model, trainXs, trainYs, classKeys) {
     // generate predictions for a uniform range of times from 0 to 60
     const [xs, preds] = tf.tidy(() => {
-        const xs = tf.linspace(0, 60, 100);
+        const xs = tf.linspace(0, 90, 100);
         const preds = model.predict(xs.reshape([100, 1])).argMax(-1);
         return [xs.dataSync(), preds.dataSync()];
     });
@@ -232,25 +239,26 @@ async function testModel(model, trainXs, trainYs, classKeys) {
         y: preds[i],
         class: classKeys[preds[i]]
     }));
+    console.log(predictedPoints);
 
-    // convert original data to points
-    const trainXsData = trainXs.dataSync();
-    const trainYsData = trainYs.dataSync();
-    const originalPoints = [];
-    for (let i = 0; i < trainXsData.length; i++) {
-        originalPoints.push({
-            x: trainXsData[i],
-            y: trainYsData[i],
-        });
-    }
+    // convert original trainXs and trainYs into points
+    const trainXsData = trainXs.arraySync().map(d => d[0]);
+    const trainYsData = trainYs.arraySync().map(d => d.indexOf(1));
+    const originalPoints = trainXsData.map((x, i) => ({
+        x,
+        y: trainYsData[i],
+        class: classKeys[trainYsData[i]]
+    }));
+    console.log(originalPoints);
 
     // render predictions
     tfvis.render.scatterplot(
-        { name: 'Predicted Data' },
-        { values: predictedPoints, originalPoints, series: ['predicted', 'original'] },
+        { name: 'Predictions vs Actual' },
+        { values: [originalPoints, predictedPoints], series: ['actual', 'predicted'] },
         {
             xLabel: 'Time (minutes)',
             yLabel: 'Class',
+            yAxisDomain: [-0.5, 3.5],
             height: 300
         }
     );
