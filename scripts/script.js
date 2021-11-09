@@ -1,6 +1,9 @@
 // training constants
-const TRAIN_EPOCHS = 50;
+const TRAIN_EPOCHS = 20;
 const TRAIN_BATCH_SIZE = 10;
+
+// model save directory
+const MODEL_DIRECTORY = 'localstorage://info200-model';
 
 /**
  * Trains the model
@@ -26,6 +29,12 @@ const TRAIN_BATCH_SIZE = 10;
 
     // test model
     await testModel(model, testXs, testYs, classKeys);
+
+    // save model
+    await model.save(MODEL_DIRECTORY);
+
+    // update page components to make predictions with model
+    attachModel(model, classKeys);
 }
 
 /**
@@ -34,20 +43,7 @@ const TRAIN_BATCH_SIZE = 10;
  */
 async function getData() {
     // todo: retrieve data from database
-    return getFakeData();
-}
-
-/**
- * Returns faked data for testing, or in case of emergency
- * @return {[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor, Object]} [trainXs, trainYs, testXs, testYs, classKeys]
- */
-async function getFakeData() {
-    // parameters to generate fake data 
-    const numExamplesPerClass = 800;
-    const [walkMin, walkMax] = [0, 15];
-    const [bikeMin, bikeMax] = [10, 30];
-    const [busMin, busMax] = [20, 60];
-    const [carMin, carMax] = [40, 90];
+    const data = await getFakeData();
 
     // create a key table for classes
     const classKeys = {
@@ -62,6 +58,47 @@ async function getFakeData() {
         2: 'bus',
         3: 'car'
     }
+
+    // convert data to tensors
+    // split data into train and test
+    const trainData = data.slice(0, data.length * 0.8);
+    const testData = data.slice(data.length * 0.8);
+
+    // create tensors for train data
+    const trainXs = tf.tensor2d(trainData.map(d => [d.time]));
+
+    // create one-hot tensor depending on class
+    const trainYs = tf.stack(trainData.map(d => {
+        const classIndex = classKeys[d.class];
+        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
+        return oneHot;
+    }));
+
+    // create tensors for test data
+    const testXs = tf.tensor2d(testData.map(d => [d.time]));
+
+    // create one-hot tensor depending on class
+    const testYs = tf.stack(testData.map(d => {
+        const classIndex = classKeys[d.class];
+        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
+        return oneHot;
+    }));
+
+    // return tensors and class key array
+    return [trainXs, trainYs, testXs, testYs, classIdToClass];
+}
+
+/**
+ * Returns faked data for testing, or in case of emergency
+ * @return {[Array]} [data]
+ */
+async function getFakeData() {
+    // parameters to generate fake data 
+    const numExamplesPerClass = 800;
+    const [walkMin, walkMax] = [0, 15];
+    const [bikeMin, bikeMax] = [10, 30];
+    const [busMin, busMax] = [20, 60];
+    const [carMin, carMax] = [40, 90];
 
     // generate arrays of random commute times between min and max for each class
     const fakeData = [];
@@ -87,32 +124,8 @@ async function getFakeData() {
     // shuffle the data
     shuffle(fakeData);
 
-    // split data into train and test
-    const trainData = fakeData.slice(0, fakeData.length * 0.8);
-    const testData = fakeData.slice(fakeData.length * 0.8);
-
-    // create tensors for train data
-    const trainXs = tf.tensor2d(trainData.map(d => [d.time]));
-
-    // create one-hot tensor depending on class
-    const trainYs = tf.stack(trainData.map(d => {
-        const classIndex = classKeys[d.class];
-        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
-        return oneHot;
-    }));
-
-    // create tensors for test data
-    const testXs = tf.tensor2d(testData.map(d => [d.time]));
-
-    // create one-hot tensor depending on class
-    const testYs = tf.stack(testData.map(d => {
-        const classIndex = classKeys[d.class];
-        const oneHot = tf.oneHot(classIndex, Object.keys(classKeys).length);
-        return oneHot;
-    }));
-
-    // return tensors and class key array
-    return [trainXs, trainYs, testXs, testYs, classIdToClass];
+    // return the data
+    return fakeData;
 }
 
 /**
@@ -142,16 +155,16 @@ function createModel(inputShape) {
     model.add(tf.layers.dense({
         inputShape: inputShape,
         kernalInitializer: 'varianceScaling',
-        units: 1,
+        units: 2,
         useBias: true,
     }));
 
-    // add a dense hidden
-    model.add(tf.layers.dense({
-        kernalInitializer: 'varianceScaling',
-        units: 2,
-        useBias: true
-    }));
+    // // add a dense hidden
+    // model.add(tf.layers.dense({
+    //     kernalInitializer: 'varianceScaling',
+    //     units: 1,
+    //     useBias: true
+    // }));
 
     // add dense output
     model.add(tf.layers.dense({
@@ -177,7 +190,6 @@ function renderData(trainXs, trainYs, classKeys) {
     // convert tensors to plottable points
     const trainXsData = trainXs.dataSync();
     const trainYsData = trainYs.arraySync().map(d => d.indexOf(1));
-    // console.log(trainYsData);
     
     const points = [];
     for (let i = 0; i < trainXsData.length; i++) {
@@ -239,7 +251,6 @@ async function testModel(model, trainXs, trainYs, classKeys) {
         y: preds[i],
         class: classKeys[preds[i]]
     }));
-    console.log(predictedPoints);
 
     // convert original trainXs and trainYs into points
     const trainXsData = trainXs.arraySync().map(d => d[0]);
@@ -249,7 +260,6 @@ async function testModel(model, trainXs, trainYs, classKeys) {
         y: trainYsData[i],
         class: classKeys[trainYsData[i]]
     }));
-    console.log(originalPoints);
 
     // render predictions
     tfvis.render.scatterplot(
@@ -262,6 +272,39 @@ async function testModel(model, trainXs, trainYs, classKeys) {
             height: 300
         }
     );
+}
+
+/**
+ * Attaches the model to the page, enabling live predictions
+ * @param {tf.Model} model
+ */
+function attachModel(model, classKeys) {
+    // get the input element from the page
+    const input = document.getElementById('minutes');
+
+    // get the output table from the page
+    const walkOutput = document.getElementById('walk-probability');
+    const bikeOutput = document.getElementById('bike-probability');
+    const busOutput = document.getElementById('bus-probability');
+    const carOutput = document.getElementById('car-probability');
+
+    // attach a listener to the input element
+    input.addEventListener('input', () => {
+        // get the value of the input
+        const value = input.value;
+
+        // convert value to number
+        const num = parseInt(value);
+
+        // get the prediction from the model
+        const prediction = model.predict(tf.tensor2d([[num]])).arraySync();
+
+        // set the output values
+        walkOutput.innerText = `${prediction[0][0].toFixed(2) * 100}%`;
+        bikeOutput.innerText = `${prediction[0][1].toFixed(2) * 100}%`;
+        busOutput.innerText = `${prediction[0][2].toFixed(2) * 100}%`;
+        carOutput.innerText = `${prediction[0][3].toFixed(2) * 100}%`;
+    });
 }
 
 document.addEventListener('DOMContentLoaded', start);

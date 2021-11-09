@@ -7,8 +7,47 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
   <!-- Import tfjs-vis -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.0.2/dist/tfjs-vis.umd.min.js"></script>
+
+  <!-- Import styles -->
+  <link rel="stylesheet" href="css/styles.css"/>
 </head>
 <body>
+  <main>
+    <h1>Daily Commute Prediction Neural Network</h1>
+    <p>
+      This neural network will predict what mode of transportation you use to get to school given the number of minutes it takes you to get there.
+    </p>
+    <div class="container">
+      <form>
+        <label for="minutes">Minutes to get to school:</label>
+        <input type="number" id="minutes" name="minutes" min="0" max="600" value="0" required></input>
+      </form>
+      <div class="prediction-container">
+        <table>
+          <tr>
+            <th>Mode</th>
+            <th>Probability</th>
+          </tr>
+          <tr>
+            <td>Walk</td>
+            <td id="walk-probability"></td>
+          </tr>
+          <tr>
+            <td>Bike</td>
+            <td id="bike-probability"></td>
+          </tr>
+          <tr>
+            <td>Bus</td>
+            <td id="bus-probability"></td>
+          </tr>
+          <tr>
+            <td>Car</td>
+            <td id="car-probability"></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </main>
   <!-- Import the main script file -->
   <script src="scripts/script.js"></script>
 </body>
