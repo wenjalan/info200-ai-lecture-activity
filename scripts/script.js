@@ -143,11 +143,18 @@ async function getFakeData() {
 
 /**
  * Gets real data from the database 
- * @returns @return {[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]} [trainXs, trainYs, testXs, testYs]
+ * @return {[Array]} [data]
  */
 async function getRealData() {
     console.log('Loading real data');
-    // TODO: make this actually return real data
+    // TODO: make this actually return real data, in a format similar to that in getFakeData()
+    /*
+        Note to Elbert: The objects should be in the following format, as an Array of whatever length:
+        {
+            time: <number>,
+            class: <string>
+        }
+    */
     return getFakeData();
 }
 
