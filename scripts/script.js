@@ -16,6 +16,14 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
     console.log('Using ' + TRAIN_EPOCHS + ' epochs');
     console.log('Fake Data: ' + FAKE_DATA);
 
+    // set status h1 to Training in orange
+    const h1 = document.getElementById('model-status');
+    h1.innerHTML = 'Training...';
+    h1.style.color = 'orange';
+
+    // disable prediction field
+    document.getElementById('minutes').disabled = true;
+
     // get data
     const [trainXs, trainYs, testXs, testYs, classKeys] = await getData();
     renderData(trainXs, trainYs, classKeys);
@@ -309,8 +317,14 @@ async function testModel(model, trainXs, trainYs, classKeys) {
  * @param {tf.Model} model
  */
 function attachModel(model, classKeys) {
-    // get the input element from the page
+    // set status h1 to Trained in green
+    const h1 = document.getElementById('model-status');
+    h1.innerHTML = 'Trained';
+    h1.style.color = 'green';
+
+    // get the input element from the page and enable it
     const input = document.getElementById('minutes');
+    input.disabled = false;
 
     // get the output table from the page
     const walkOutput = document.getElementById('walk-probability');
@@ -319,7 +333,7 @@ function attachModel(model, classKeys) {
     const carOutput = document.getElementById('car-probability');
 
     // attach a listener to the input element
-    input.addEventListener('input', () => {
+    const onClick = () => {
         // get the value of the input
         const value = input.value;
 
@@ -334,7 +348,9 @@ function attachModel(model, classKeys) {
         bikeOutput.innerText = `${prediction[0][1].toFixed(2) * 100}%`;
         busOutput.innerText = `${prediction[0][2].toFixed(2) * 100}%`;
         carOutput.innerText = `${prediction[0][3].toFixed(2) * 100}%`;
-    });
+    };
+    input.addEventListener('input', onClick);
+    onClick();
 }
 
 // add listener to button to retrain

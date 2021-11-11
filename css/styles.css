@@ -14,7 +14,6 @@ main {
 }
 
 .container {
-    margin-top: 20px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -38,4 +37,12 @@ th {
 
 h1 {
     margin-bottom: 20px;
+}
+
+.model-status-container {
+    margin-top: 20px;
+}
+
+#model-status {
+    color: red;
 }
