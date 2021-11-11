@@ -27,6 +27,20 @@ document.getElementById('submit').addEventListener('click', function(event) {
     const minutes = document.getElementById('minutes').value;
     const mode = document.getElementById('mode').value;
 
+    // if minutes is not a number or was empty, alert user
+    if (isNaN(minutes) || minutes === '') {
+        alert('Please enter a number for minutes');
+        return;
+    }
+
+    // clear form
+    document.getElementById('form').reset();
+
+    // add a submitted h1 to the main element
+    const h1 = document.createElement('h1');
+    h1.innerText = 'Submitted!';
+    document.getElementById('main').appendChild(h1);
+
     // submit values to database
     submitValues(minutes, mode);
 });
