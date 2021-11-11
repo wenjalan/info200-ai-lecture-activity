@@ -1,5 +1,6 @@
 // training constants
-const TRAIN_EPOCHS = 20;
+let TRAIN_EPOCHS = 20;
+let FAKE_DATA = true;
 const TRAIN_BATCH_SIZE = 10;
 
 // model save directory
@@ -9,6 +10,12 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
  * Trains the model
  */
  async function start() {
+    TRAIN_EPOCHS = document.getElementById('epochs').value;
+    FAKE_DATA = document.getElementById('use-fake-data').checked;
+
+    console.log('Using ' + TRAIN_EPOCHS + ' epochs');
+    console.log('Fake Data: ' + FAKE_DATA);
+
     // get data
     const [trainXs, trainYs, testXs, testYs, classKeys] = await getData();
     renderData(trainXs, trainYs, classKeys);
@@ -43,7 +50,12 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
  */
 async function getData() {
     // todo: retrieve data from database
-    const data = await getFakeData();
+    let data = undefined;
+    if (FAKE_DATA) {
+        data = await getFakeData();
+    } else {
+        data = await getRealData();
+    }
 
     // create a key table for classes
     const classKeys = {
@@ -93,6 +105,7 @@ async function getData() {
  * @return {[Array]} [data]
  */
 async function getFakeData() {
+    console.log('Loading fake data');
     // parameters to generate fake data 
     const numExamplesPerClass = 800;
     const [walkMin, walkMax] = [0, 15];
@@ -126,6 +139,16 @@ async function getFakeData() {
 
     // return the data
     return fakeData;
+}
+
+/**
+ * Gets real data from the database 
+ * @returns @return {[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]} [trainXs, trainYs, testXs, testYs]
+ */
+async function getRealData() {
+    console.log('Loading real data');
+    // TODO: make this actually return real data
+    return getFakeData();
 }
 
 /**
@@ -307,4 +330,7 @@ function attachModel(model, classKeys) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', start);
+// add listener to button to retrain
+document.getElementById('retrain-button').addEventListener('click', start);
+
+// document.addEventListener('DOMContentLoaded', start);
