@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Introduction to AI and Machine Learning Activity</title>
+
+    <!-- Import styles -->
+    <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+    <main>
+        <!-- Form that asks the user for a number of minutes it takes them to get to school followed by a dropdown list containing the items 1. walk 2. bike 3. bus 4. car -->
+        <form>
+            <h1>How long does it take you to get to school?</h1>
+            <input id="minutes" type="number" name="minutes" placeholder="Minutes" required>
+            <select id="mode" name="transport">
+                <option value="walk">Walk</option>
+                <option value="bike">Bike</option>
+                <option value="bus">Bus</option>
+                <option value="car">Car</option>
+            </select>
+            <input id="submit" type="submit" value="Submit">
+        </form>
+    </main>
+    <!-- Import the main script file -->
+    <script src="scripts/form.js"></script>
+</body>
+</html>

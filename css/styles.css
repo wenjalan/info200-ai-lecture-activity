@@ -35,3 +35,7 @@ td, th {
 th {
     border-bottom: 1px solid #ddd;
 }
+
+h1 {
+    margin-bottom: 20px;
+}
