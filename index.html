@@ -18,11 +18,22 @@
       This neural network will predict what mode of transportation you use to get to school given the number of minutes it takes you to get there.
     </p>
     <div class="container">
-      <form>
-        <label for="minutes">Minutes to get to school:</label>
-        <input type="number" id="minutes" name="minutes" min="0" max="600" value="0" required></input>
-      </form>
+      <div class="training-parameters-container">
+        <h3>Training Options</h3>
+        <form>
+          <label for="epochs">Epochs:</label>
+          <input type="number" id="epochs" name="epochs" value="20" min="1" max="1000" step="1"/>
+          <label for="use-fake-data">Use fake data:</label>
+          <input type="checkbox" id="use-fake-data" name="use-fake-data" checked/>
+          <input type="button" id="retrain-button" value="Retrain"/>
+        </form>
+      </div>
       <div class="prediction-container">
+        <h3>Make a Prediction</h3>
+        <form>
+          <label for="minutes">Minutes to get to school:</label>
+          <input type="number" id="minutes" name="minutes" min="0" max="600" value="0" required></input>
+        </form>
         <table>
           <tr>
             <th>Mode</th>
