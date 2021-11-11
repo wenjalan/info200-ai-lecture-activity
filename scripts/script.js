@@ -183,11 +183,11 @@ function createModel(inputShape) {
     }));
 
     // // add a dense hidden
-    // model.add(tf.layers.dense({
-    //     kernalInitializer: 'varianceScaling',
-    //     units: 1,
-    //     useBias: true
-    // }));
+    model.add(tf.layers.dense({
+        kernalInitializer: 'varianceScaling',
+        units: 1,
+        useBias: true
+    }));
 
     // add dense output
     model.add(tf.layers.dense({
