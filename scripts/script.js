@@ -68,8 +68,21 @@ async function getData(snapshots) {
             time: parseInt(d.time),
             class: d.mode
         }));
-        console.log(data);
+
+        // if we should extrapolate data, do so
+        if (document.getElementById('extrapolate-data').checked) {
+            console.log('Extrapolating data from ' + data.length + ' examples...');
+            data = extrapolateData(data);
+        }
     }
+
+    // shuffle data
+    shuffle(data);
+
+    // set status h1 to Training in orange
+    const h1 = document.getElementById('model-status');
+    h1.innerHTML = 'Training on ' + data.length + ' examples...';
+    h1.style.color = 'orange';
 
     // create a key table for classes
     const classKeys = {
@@ -115,6 +128,48 @@ async function getData(snapshots) {
 }
 
 /**
+ * Extrapolates data from mins and maxes
+ * @returns {[Array]} [data]
+ */
+function extrapolateData(data) {
+    // get mins and maxes for each class
+    const mins = {};
+    const maxes = {};
+    data.forEach(d => {
+        if (!mins[d.class]) {
+            mins[d.class] = d.time;
+            maxes[d.class] = d.time;
+        } else {
+            if (d.time < mins[d.class]) {
+                mins[d.class] = d.time;
+            }
+            if (d.time > maxes[d.class]) {
+                maxes[d.class] = d.time;
+            }
+        }
+    });
+
+    // add extrapolated data to data until it has 4000 examples
+    let extrapolatedData = [];
+    while (extrapolatedData.length < 4000) {
+        // get random class
+        const className = Object.keys(mins)[Math.floor(Math.random() * Object.keys(mins).length)];
+
+        // get random time between mins and maxes for class
+        const time = Math.floor(Math.random() * (maxes[className] - mins[className])) + mins[className];
+
+        // add data to array
+        extrapolatedData.push({
+            time: time,
+            class: className
+        });
+    }
+
+    // return data
+    return data.concat(extrapolatedData);
+}
+
+/**
  * Returns faked data for testing, or in case of emergency
  * @return {[Array]} [data]
  */
@@ -147,9 +202,6 @@ async function getFakeData() {
             class: 'car'
         });
     }
-
-    // shuffle the data
-    shuffle(fakeData);
 
     // return the data
     return fakeData;
