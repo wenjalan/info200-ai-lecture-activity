@@ -1,6 +1,6 @@
 // training constants
 let TRAIN_EPOCHS = 20;
-let FAKE_DATA = true;
+let FAKE_DATA = false;
 const TRAIN_BATCH_SIZE = 10;
 
 // model save directory
@@ -9,7 +9,7 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
 /**
  * Trains the model
  */
- async function start() {
+ async function start(snapshots) {
     TRAIN_EPOCHS = document.getElementById('epochs').value;
     FAKE_DATA = document.getElementById('use-fake-data').checked;
 
@@ -25,7 +25,7 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
     document.getElementById('minutes').disabled = true;
 
     // get data
-    const [trainXs, trainYs, testXs, testYs, classKeys] = await getData();
+    const [trainXs, trainYs, testXs, testYs, classKeys] = await getData(snapshots);
     renderData(trainXs, trainYs, classKeys);
 
     // get the model and render it
@@ -56,13 +56,15 @@ const MODEL_DIRECTORY = 'localstorage://info200-model';
  * Retrives data from database to train model on
  * @return {[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]} [trainXs, trainYs, testXs, testYs]
  */
-async function getData() {
+async function getData(snapshots) {
     // todo: retrieve data from database
     let data = undefined;
+
     if (FAKE_DATA) {
         data = await getFakeData();
     } else {
-        data = await getRealData();
+        data = await getRealData(snapshots);
+        console.log(data);
     }
 
     // create a key table for classes
@@ -153,17 +155,18 @@ async function getFakeData() {
  * Gets real data from the database 
  * @return {[Array]} [data]
  */
-async function getRealData() {
+async function getRealData(snapshots) {
     console.log('Loading real data');
-    // TODO: make this actually return real data, in a format similar to that in getFakeData()
-    /*
-        Note to Elbert: The objects should be in the following format, as an Array of whatever length:
-        {
-            time: <number>,
-            class: <string>
-        }
-    */
-    return getFakeData();
+
+    const ssDocs = snapshots.docs;
+    let data = [];
+
+    // Extract data from snapshots
+    for (let d in ssDocs) {
+        data.push(ssDocs[d].data());
+    }
+
+    return data;
 }
 
 /**
@@ -353,7 +356,5 @@ function attachModel(model, classKeys) {
     onClick();
 }
 
-// add listener to button to retrain
-document.getElementById('retrain-button').addEventListener('click', start);
 
 // document.addEventListener('DOMContentLoaded', start);

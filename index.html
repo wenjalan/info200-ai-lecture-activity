@@ -8,6 +8,46 @@
   <!-- Import tfjs-vis -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.0.2/dist/tfjs-vis.umd.min.js"></script>
 
+  <!-- Connect to Firebase -->
+  <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.4.0/firebase-app.js';
+
+      const firebaseConfig = {
+          apiKey: "AIzaSyDPMsynoRiF6VURgx1tJha0LPHUaGKHcoY",
+          authDomain: "alanai-d2608.firebaseapp.com",
+          projectId: "alanai-d2608",
+          storageBucket: "alanai-d2608.appspot.com",
+          messagingSenderId: "901575902123",
+          appId: "1:901575902123:web:0878394831e7e80dfdc8ee",
+          measurementId: "G-M4N6S0PR9H"
+      };
+
+      const app = initializeApp(firebaseConfig);
+  </script>
+
+  <!-- Establish Firestore and allow data reading functions -->
+  <script type="module">
+      import { getFirestore, collection, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/9.4.0/firebase-firestore.js';
+
+      let db = getFirestore();
+
+      // Functions
+      async function extractSnapshots() {
+          const querySnapshot = await getDocs(collection(db, "data"));
+
+          return querySnapshot;
+      }
+
+      // add listener to button to retrain
+      document.getElementById('retrain-button').addEventListener('click', async (event) => {
+        event.preventDefault();
+
+        let snapshots = await extractSnapshots();
+
+        start(snapshots);
+      });
+  </script>
+
   <!-- Import styles -->
   <link rel="stylesheet" href="css/styles.css"/>
 </head>
