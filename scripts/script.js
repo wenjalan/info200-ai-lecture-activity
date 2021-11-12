@@ -63,7 +63,11 @@ async function getData(snapshots) {
     if (FAKE_DATA) {
         data = await getFakeData();
     } else {
-        data = await getRealData(snapshots);
+        let realData = await getRealData(snapshots);
+        data = realData.map(d => ({
+            time: parseInt(d.time),
+            class: d.mode
+        }));
         console.log(data);
     }
 
