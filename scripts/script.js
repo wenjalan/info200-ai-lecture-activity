@@ -1,6 +1,7 @@
 // training constants
 let TRAIN_EPOCHS = 20;
 let FAKE_DATA = false;
+let N_EXAMPLES = 0;
 const TRAIN_BATCH_SIZE = 10;
 
 // model save directory
@@ -82,6 +83,7 @@ async function getData(snapshots) {
     // set status h1 to Training in orange
     const h1 = document.getElementById('model-status');
     h1.innerHTML = 'Training on ' + data.length + ' examples...';
+    N_EXAMPLES = data.length;
     h1.style.color = 'orange';
 
     // create a key table for classes
@@ -136,6 +138,12 @@ function extrapolateData(data) {
     const mins = {};
     const maxes = {};
     data.forEach(d => {
+        // skip if time is greater than 120
+        if (d.time > 120) {
+            return;
+        }
+
+        // get mins and maxes
         if (!mins[d.class]) {
             mins[d.class] = d.time;
             maxes[d.class] = d.time;
@@ -305,6 +313,7 @@ function renderData(trainXs, trainYs, classKeys) {
             xLabel: 'Time (minutes)',
             yLabel: 'Class',
             yAxisDomain: [-0.5, 3.5],
+            xAxisDomain: [0, 120],
             height: 300
         }
     );
@@ -366,6 +375,7 @@ async function testModel(model, trainXs, trainYs, classKeys) {
             xLabel: 'Time (minutes)',
             yLabel: 'Class',
             yAxisDomain: [-0.5, 3.5],
+            xAxisDomain: [0, 120],
             height: 300
         }
     );
@@ -378,7 +388,7 @@ async function testModel(model, trainXs, trainYs, classKeys) {
 function attachModel(model, classKeys) {
     // set status h1 to Trained in green
     const h1 = document.getElementById('model-status');
-    h1.innerHTML = 'Trained';
+    h1.innerHTML = 'Trained on ' + N_EXAMPLES + ' examples';
     h1.style.color = 'green';
 
     // get the input element from the page and enable it
